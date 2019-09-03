@@ -44,3 +44,4 @@ int main() {
 	std::cout << result;
 	return 0;
 }
+//fuck this university
