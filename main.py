@@ -38,7 +38,6 @@ train_data, test_data = featuresets[size:], featuresets[:size]
 classifier = nltk.NaiveBayesClassifier.train(train_data)
 
 #calculate precision and recall
-print(nltk.classify.accuracy(classifier, test_data))
 precision = 0
 recall = 0
-print("Precision = {} Recall = {}".format(precision,recall))
+print("Accuracy = {} Precision = {} Recall = {}".format(nltk.classify.accuracy(classifier, test_data), precision,recall))
