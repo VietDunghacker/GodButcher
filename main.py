@@ -13,25 +13,32 @@ from nltk.tokenize import word_tokenize
 from nltk.util import bigrams
 
 #collect bad words
-bad_words = set()
+bad_words = {}
 
 for file in os.listdir("./bad_word/csv_file/"):
 	with open("./bad_word/csv_file/" + file, errors = 'ignore') as f:
 		data = csv.reader(f, delimiter = ";")
+		temp_data = set()
 		for row in data:
 			if(len(row) > 0):
-				bad_words.add(row[0])
+				temp_data.add(row[0])
+		bad_words["./bad_word/csv_file/" + file] = temp_data
 for file in os.listdir("./bad_word/txt_file/"):
 	with open("./bad_word/txt_file/" + file, errors = 'ignore') as f:
+		temp_data = set()
 		for row in f:
 			if(len(row.strip()) > 0):
-				bad_words.add(row.strip())
+				temp_data.add(row.strip())
+		bad_words["./bad_word/txt_file/" + file] = temp_data
 for file in os.listdir("./bad_word/comma_seperated_txt_file/"):
 	with open("./bad_word/comma_seperated_txt_file/" + file, errors = 'ignore') as f:
+		temp_data = set()
 		for row in f:
 			if not (len(row.strip()) == 0 or row.strip().startswith("##")):
-				for word in word_tokenize(row.strip()):
-					bad_words.add(word)
+				for word in row.strip().split(', '):
+					temp_data.add(word)
+		bad_words["./bad_word/comma_seperated_txt_file/" + file] = temp_data
+print(bad_words)
 
 ps = PorterStemmer() #stemmer
 stopwords = set(stopwords.words('english')) #stopword
@@ -54,7 +61,7 @@ def negative_features(sent):
 	return dic
 
 #classify data using NaiveBayes
-featuresets = [(negative_features(sent), tag) for (sent, tag) in train_data] #feature sets
+"""featuresets = [(negative_features(sent), tag) for (sent, tag) in train_data] #feature sets
 size = int(0.1*len(featuresets))
 train_set, test_set = featuresets[size:], featuresets[:size]
 classifier = nltk.NaiveBayesClassifier.train(train_data)
@@ -63,4 +70,4 @@ classifier = nltk.NaiveBayesClassifier.train(train_data)
 accuracy = nltk.classify.accuracy(classifier, test_data)
 precision = 0
 recall = 0
-print("Accuracy = {} Precision = {} Recall = {}".format(accuracy, precision,recall))
+print("Accuracy = {} Precision = {} Recall = {}".format(accuracy, precision,recall))"""
