@@ -50,11 +50,11 @@ with open("./toxic_comment/train.csv") as f:
 	for row in data:
 		train_data.append((row[1], {"toxic" : row[2], "severe_toxic" : row[3], "obscene" : row[4], "threat" : row[5], "insult": row[6], "identity_hate" : row[7]}))
 
-#negative features
+#negative features. Input is a sentence (raw string)
 def negative_features(sent):
-	words = word_tokenize(sent)
+	words = word_tokenize(sent) #tokenize into list of words
 	#clean the data
-
+	tag_words = nltk.pos_tag(words) #add tag into each word
 	#add features
 	dic = {}
 	return dic
