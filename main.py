@@ -245,8 +245,11 @@ def rate_lower(raw):
     return({'rate_lower': round(rate, 3)})
 
 #classify data using NaiveBayes
+feature_vector = [negative_features(sent) for (sent,tag) in train_data]
 for label in labels:
-	featuresets = [(negative_features(sent), tag[label]) for (sent, tag) in train_data] #feature sets
+	featuresets = []
+	for i in range(len(train_data)):
+		featuresets.append((feature_vector[i], train_data[i][1][label]))
 	size = int(0.1*len(featuresets))
 	train_set, test_set = featuresets[size:], featuresets[:size]
 	classifier = nltk.NaiveBayesClassifier.train(train_set)
