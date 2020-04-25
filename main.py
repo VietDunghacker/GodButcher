@@ -44,6 +44,7 @@ with open("./toxic_comment/train.csv") as f:
 	for row in data:
 		train_data.append((row[1], {"toxic" : row[2], "severe_toxic" : row[3], "obscene" : row[4], "threat" : row[5], "insult": row[6], "identity_hate" : row[7]}))
 
+#negative features
 def negative_features(sent):
 	words = word_tokenize(sent)
 	#clean the data
