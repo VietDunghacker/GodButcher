@@ -3,6 +3,8 @@ import random
 import csv
 import re
 import string
+import os
+import sys
 from urllib import request
 from nltk import FreqDist
 from nltk.corpus import stopwords 
@@ -11,17 +13,36 @@ from nltk.tokenize import word_tokenize
 from nltk.util import bigrams
 
 #collect bad words
-url = "http://www.cs.cmu.edu/~biglou/resources/bad-words.txt"
-response = request.urlopen(url)
-raw = response.read().decode('utf8')
-raw = re.sub('\s+',' ',raw)
-bad_words = raw.split()
+bad_words = {}
+
+for file in os.listdir("./bad_word/csv_file/"):
+	with open("./bad_word/csv_file/" + file, errors = 'ignore') as f:
+		data = csv.reader(f, delimiter = ";")
+		temp_data = set()
+		for row in data:
+			if(len(row) > 0):
+				temp_data.add(row[0])
+		bad_words["./bad_word/csv_file/" + file] = temp_data
+for file in os.listdir("./bad_word/txt_file/"):
+	with open("./bad_word/txt_file/" + file, errors = 'ignore') as f:
+		temp_data = set()
+		for row in f:
+			if(len(row.strip()) > 0):
+				temp_data.add(row.strip())
+		bad_words["./bad_word/txt_file/" + file] = temp_data
+for file in os.listdir("./bad_word/comma_seperated_txt_file/"):
+	with open("./bad_word/comma_seperated_txt_file/" + file, errors = 'ignore') as f:
+		temp_data = set()
+		for row in f:
+			if not (len(row.strip()) == 0 or row.strip().startswith("##")):
+				for word in row.strip().split(', '):
+					temp_data.add(word)
+		bad_words["./bad_word/comma_seperated_txt_file/" + file] = temp_data
 
 ps = PorterStemmer() #stemmer
 stopwords = set(stopwords.words('english')) #stopword
 
 #collect train data
-train_set = []
 def num_word(raw):
     '''
     count the number of word (duplicated)
@@ -185,21 +206,31 @@ def rate_lower(raw):
     '''
     l= [w for w in raw if re.search('[a-z]',w)]
     return({'rate lower':len(l)/len(raw)})
-def negative_features(sent):
-	words = word_tokenize(sent)
-	#clean the data
 
+train_data = []
+with open("./toxic_comment/train.csv") as f:
+	data = csv.reader(f)
+	next(data)
+	for row in data:
+		train_data.append((row[1], {"toxic" : row[2], "severe_toxic" : row[3], "obscene" : row[4], "threat" : row[5], "insult": row[6], "identity_hate" : row[7]}))
+
+#negative features. Input is a sentence (raw string)
+def negative_features(sent):
+	words = word_tokenize(sent) #tokenize into list of words
+	#clean the data
+	tag_words = nltk.pos_tag(words) #add tag into each word
 	#add features
 	dic = {}
 	return dic
 
 #classify data using NaiveBayes
-featuresets = [] #feature sets
+featuresets = [(negative_features(sent), tag) for (sent, tag) in train_data] #feature sets
 size = int(0.1*len(featuresets))
-train_data, test_data = featuresets[size:], featuresets[:size]
+train_set, test_set = featuresets[size:], featuresets[:size]
 classifier = nltk.NaiveBayesClassifier.train(train_data)
 
 #calculate precision and recall
+accuracy = nltk.classify.accuracy(classifier, test_data)
 precision = 0
 recall = 0
-print("Accuracy = {} Precision = {} Recall = {}".format(nltk.classify.accuracy(classifier, test_data), precision,recall))
+print("Accuracy = {} Precision = {} Recall = {}".format(accuracy, precision,recall))
