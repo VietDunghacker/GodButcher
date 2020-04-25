@@ -38,7 +38,6 @@ for file in os.listdir("./bad_word/comma_seperated_txt_file/"):
 				for word in row.strip().split(', '):
 					temp_data.add(word)
 		bad_words["./bad_word/comma_seperated_txt_file/" + file] = temp_data
-print(bad_words)
 
 ps = PorterStemmer() #stemmer
 stopwords = set(stopwords.words('english')) #stopword
@@ -61,7 +60,7 @@ def negative_features(sent):
 	return dic
 
 #classify data using NaiveBayes
-"""featuresets = [(negative_features(sent), tag) for (sent, tag) in train_data] #feature sets
+featuresets = [(negative_features(sent), tag) for (sent, tag) in train_data] #feature sets
 size = int(0.1*len(featuresets))
 train_set, test_set = featuresets[size:], featuresets[:size]
 classifier = nltk.NaiveBayesClassifier.train(train_data)
@@ -70,4 +69,4 @@ classifier = nltk.NaiveBayesClassifier.train(train_data)
 accuracy = nltk.classify.accuracy(classifier, test_data)
 precision = 0
 recall = 0
-print("Accuracy = {} Precision = {} Recall = {}".format(accuracy, precision,recall))"""
+print("Accuracy = {} Precision = {} Recall = {}".format(accuracy, precision,recall))
