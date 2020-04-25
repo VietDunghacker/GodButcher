@@ -41,31 +41,69 @@ for file in os.listdir("./bad_word/comma_seperated_txt_file/"):
 
 ps = PorterStemmer() #stemmer
 stopwords = set(stopwords.words('english')) #stopword
+englishwords = set(nltk.corpus.words.words())
+labels = ["toxic","severe_toxic","obscene","threat","insult","identity_hate"]
 
 #collect train data
+train_data = []
+with open("./toxic_comment/train.csv") as f:
+	data = csv.reader(f)
+	next(data)
+	for row in data:
+		train_data.append((row[1],{"toxic" : int(row[2]), "severe_toxic" : int(row[3]), "obscene" : int(row[4]), "threat" : int(row[5]), "insult": int(row[6]), "identity_hate" : int(row[7])}))
+
+#negative features. Input is a sentence (raw string)
+count = 0
+def negative_features(sent):
+	words = word_tokenize(sent) #tokenize into list of words
+	#clean the data
+	#tag_words = nltk.pos_tag(words) #add tag into each word
+	#add features
+	dic = {}
+	dic.update(num_word(sent))
+	dic.update(num_unique_word(sent))
+	dic.update(ration_unique(sent))
+	dic.update(num_token_no_stop(words))
+	dic.update(num_spelling_error(words))
+	dic.update(num_allcap(words))
+	dic.update(rate_allcap(sent,words))
+	dic.update(length_cmt(sent))
+	dic.update(num_cap_letter(sent))
+	dic.update(rate_cap_letter(sent))
+	dic.update(num_explan_mark(sent))
+	dic.update(rate_explan_mark(sent))
+	dic.update(num_quest_mark(sent))
+	dic.update(rate_quest_mark(sent))
+	dic.update(num_punc_mark(sent))
+	dic.update(num_mark_sym(sent))
+	dic.update(num_smile(words))
+	dic.update(rate_lower(sent))
+	return dic
+#features
 def num_word(raw):
     '''
     count the number of word (duplicated)
-    a word is defined as a substring seperated by \space
+    a word is defined as a substring seperated by space
     input: raw : string
     out put: dict num word: number of word 
     '''
-    return ({'num word': len(raw.split())})
+    return ({'num_word': len(raw.split())})
 def num_unique_word(raw):
     '''
     count number of unique word (not duplicated)
     input raw: string
     output: dict num_unique_word: number of unique word
     '''
-    return ({'num unique word':len(set(raw.split()))})
+    return ({'num_unique_word':len(set(raw.split()))})
 def ration_unique(raw):
     '''
     compute ration of unique word
-    a word is a substring seperated by \space
+    a word is a substring seperated by space
     input raw : str
     output: dict ration_unique : ration of unique word
     '''
-    return ({'ration unique':num_unique_word(raw)['num unique word']/num_word(raw)['num word']})
+    rate = num_unique_word(raw)['num_unique_word']/num_word(raw)['num_word']
+    return ({'ration unique': round(rate,3)})
 def num_token_no_stop(tokened):
     '''
     return number of token without stop word (depend on token function, can conclude '.', ',')
@@ -73,9 +111,8 @@ def num_token_no_stop(tokened):
     intput tokened list : list
     output dict num token no stop: number of tokens without stop word 
     '''
-    stop= stopwords.words('english')
-    no_stop= [w for w in tokened if w.lower() not in stop ]
-    return ({'num token no stop':len(no_stop)})
+    no_stop= [w for w in tokened if w.lower() not in stopwords]
+    return ({'num_token_no_stop':len(no_stop)})
 def num_spelling_error(tokened):
     '''
     return number of word not in English vocab
@@ -84,17 +121,16 @@ def num_spelling_error(tokened):
     input tokened: list
     output: dict num spelling error :number of tokens not in English vocab
     '''
-    words= nltk.corpus.words.words()
-    spell_wrong= [w for w in tokened if w.lower() not in words]
-    return ({'num spelling error':len(spell_wrong)})
+    spell_wrong= [w for w in tokened if w.lower() not in englishwords]
+    return ({'num_spelling_error':len(spell_wrong)})
 def num_allcap(tokened):
     '''
     return number of word written all captial (duplicated)
     input tokened: list
     output: dict num all cap: number of tokens written all capital
     '''
-    cap= [w for w in tokened if re.search('^[A-Z]+$', w)]
-    return ({'num all cap':len(cap)})
+    cap= [w for w in tokened if w.isupper()]
+    return ({'num_all_cap':len(cap)})
 def rate_allcap(raw, tokened):
     '''
     return portion of word written all capital (duplicated)
@@ -102,31 +138,31 @@ def rate_allcap(raw, tokened):
            tokened: list
     output: dict rate all cap :rate of all capital word
     '''
-    r=num_allcap(tokened)['num all cap']/ num_word(raw)['num word']
-    return ({'rate all cap':r})
+    rate = num_allcap(tokened)['num_all_cap']/ num_word(raw)['num_word']
+    return ({'rate_all_cap': round(rate, 3)})
 def length_cmt(raw):
     '''
     return length of the cmt
     intput raw: str
     output: dict 'length cmt':length of the cmt
     '''
-    return ({'length cmt': len(raw)})
+    return ({'length_cmt': len(raw)})
 def num_cap_letter(raw):
     '''
     return number of capital letter
     input raw: str
     output: dict 'num cap letter':number of capital letter
     '''
-    cap= [w for w in raw if re.search('[A-Z]',w)]
-    return({'num cap letter':len(cap)})
+    cap = [w for w in raw if w.isupper()]
+    return({'num_cap_letter':len(cap)})
 def rate_cap_letter(raw):
     '''
     return ratio of capital letter
     input raw: str
     outout: dict 'rate cap letter': ratio of capital letter
     '''
-    r=num_cap_letter(raw)['num cap letter']/len(raw)
-    return({'rate cap letter':r})
+    rate = num_cap_letter(raw)['num_cap_letter']/len(raw)
+    return({'rate_cap_letter':round(rate, 3)})
 def num_explan_mark(raw):
     '''
     return number of explanation mark (not necessary using as explanation)
@@ -136,16 +172,16 @@ def num_explan_mark(raw):
     count=0
     for c in raw:
         if c=='!':
-            count=count+1
-    return {'num explan mark':count}
+            count = count+1
+    return {'num_explan_mark':count}
 def rate_explan_mark(raw):
     '''
     return rate of explanation mark (not necessary using as explanation)
     input raw: str
     output: rate of explanation mark
     '''
-    r=num_explan_mark(raw)['num explan mark']/len(raw)
-    return({'rate explan mark':r})
+    rate = num_explan_mark(raw)['num_explan_mark']/len(raw)
+    return({'rate_explan_mark':round(rate, 3)})
 def num_quest_mark(raw):
     '''
     return number of question mark (not necessary using as question)
@@ -156,16 +192,16 @@ def num_quest_mark(raw):
     for c in raw:
         if c=='?':
             count=count+1
-    return {'num quest mark' :count}
+    return {'num_quest_mark' : count}
 def rate_quest_mark(raw):
     '''
     return rate of question mark (not necessary using as question)
     input raw: str
     output: dict 'rate quest mark':rate of question mark
     '''
-    r= num_quest_mark(raw)['num quest mark']/len(raw)
-    return {'rate quest mark', r}
-def num_punc_mark( raw):
+    rate = num_quest_mark(raw)['num_quest_mark']/len(raw)
+    return {'rate quest mark' : round(rate, 3)}
+def num_punc_mark(raw):
     '''
     return number of punctuation mark (not necessary using as finish setences)
     input tokened: str
@@ -175,8 +211,8 @@ def num_punc_mark( raw):
     for c in raw:
         if c=='.':
             count=count+1
-    return {'num ounc mark': count}
-def num_mark_sym( raw):
+    return {'num_ounc_mark': count}
+def num_mark_sym(raw):
     '''
     return number of marking symbol (*, &,$,%)
     input raw: str
@@ -186,8 +222,8 @@ def num_mark_sym( raw):
     for c in raw:
         if c in {'*','&','$','%'}:
             count=count+1
-    return {'num mark sym': count}
-def num_smile( tokened):
+    return {'num_mark_sym': count}
+def num_smile(tokened):
     '''
     Count the number of emoji (can not count the case hoang:) or :))))
     input: tokened: list
@@ -197,40 +233,39 @@ def num_smile( tokened):
     for w in bigrams(tokened):
         if w== (':',')'):
             count=count+1
-    return {'num smile':count}
+    return {'num_smile':count}
 def rate_lower(raw):
     '''
     Count the rate of lowercase character
     input raw: str
     output: dict 'rate lower': rate of lowercase letter
     '''
-    l= [w for w in raw if re.search('[a-z]',w)]
-    return({'rate lower':len(l)/len(raw)})
-
-train_data = []
-with open("./toxic_comment/train.csv") as f:
-	data = csv.reader(f)
-	next(data)
-	for row in data:
-		train_data.append((row[1], {"toxic" : row[2], "severe_toxic" : row[3], "obscene" : row[4], "threat" : row[5], "insult": row[6], "identity_hate" : row[7]}))
-
-#negative features. Input is a sentence (raw string)
-def negative_features(sent):
-	words = word_tokenize(sent) #tokenize into list of words
-	#clean the data
-	tag_words = nltk.pos_tag(words) #add tag into each word
-	#add features
-	dic = {}
-	return dic
+    l = [w for w in raw if w.islower()]
+    rate = len(l)/len(raw)
+    return({'rate_lower': round(rate, 3)})
 
 #classify data using NaiveBayes
-featuresets = [(negative_features(sent), tag) for (sent, tag) in train_data] #feature sets
-size = int(0.1*len(featuresets))
-train_set, test_set = featuresets[size:], featuresets[:size]
-classifier = nltk.NaiveBayesClassifier.train(train_data)
+for label in labels:
+	featuresets = [(negative_features(sent), tag[label]) for (sent, tag) in train_data] #feature sets
+	size = int(0.1*len(featuresets))
+	train_set, test_set = featuresets[size:], featuresets[:size]
+	classifier = nltk.NaiveBayesClassifier.train(train_set)
 
-#calculate precision and recall
-accuracy = nltk.classify.accuracy(classifier, test_data)
-precision = 0
-recall = 0
-print("Accuracy = {} Precision = {} Recall = {}".format(accuracy, precision,recall))
+	errorPP, errorPN, errorNP, errorNN = 0, 0, 0, 0
+	for (feature, tag) in test_set:
+		predict = classifier.classify(feature)
+		if predict == tag:
+			if tag == 1:
+				errorPP += 1
+			else:
+				errorNN += 1
+		else:
+			if tag == 1:
+				errorNP += 1
+			else:
+				errorPN += 1
+	precision = round(errorPP/(errorPP + errorPN),4)
+	recall = round(errorNN/(errorNN + errorNP),4)
+
+	print("Label {}: Accuracy = {} Precision = {} Recall = {}".format(label, nltk.classify.accuracy(classifier, test_set), precision, recall))
+	#classifier.show_most_informative_features(20)
