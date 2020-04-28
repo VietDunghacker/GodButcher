@@ -24,7 +24,6 @@ with open("./toxic_comment/train.csv") as f:
 		train_data.append((row[1],{"toxic" : int(row[2]), "severe_toxic" : int(row[3]), "obscene" : int(row[4]), "threat" : int(row[5]), "insult": int(row[6]), "identity_hate" : int(row[7])}))
 
 #negative features. Input is a sentence (raw string)
-count = 0
 def negative_features(sent):
 	words = word_tokenize(sent) #tokenize into list of words
 	#clean the data
@@ -58,13 +57,12 @@ def negative_features(sent):
 	return dic
 
 #classify data using NaiveBayes
-feature_vector = [negative_features(sent) for (sent,tag) in train_data[:5000]]
+feature_vector = [negative_features(sent) for (sent,tag) in train_data]
 for label in labels:
 	featuresets = []
 	for i in range(len(feature_vector)):
 		featuresets.append((feature_vector[i], train_data[i][1][label]))
 	size = int(0.1*len(featuresets))
-	size  = 2500
 	train_set, test_set = featuresets[size:], featuresets[:size]
 	classifier = nltk.NaiveBayesClassifier.train(train_set)
 
