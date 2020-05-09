@@ -4,6 +4,13 @@ import sys
 import nltk
 from nltk.corpus import stopwords
 from nltk.util import bigrams
+from nltk.parse.stanford import StanfordDependencyParser
+
+
+path_to_jar = './stanford_parser/stanford-parser.jar'
+path_to_models_jar = './stanford_parser/stanford-parser-3.9.2-models.jar'
+
+dependency_parser = StanfordDependencyParser(path_to_jar=path_to_jar, path_to_models_jar=path_to_models_jar)
 
 stopwords = set(stopwords.words('english')) #stopword
 englishwords = set(nltk.corpus.words.words())
@@ -32,6 +39,9 @@ for file in os.listdir("./bad_word/comma_seperated_txt_file/"):
                 for word in row.strip().split(', '):
                     temp_data.add(word)
         bad_words[file] = temp_data
+distinct_bad_words = set()
+for key in bad_words.keys():
+    distinct_bad_words = distinct_bad_words.union(bad_words[key])
 
 def num_word(raw):
     '''
@@ -251,15 +261,276 @@ def x24(tokened):
 
 #input: list of words, output:integer
 def x25(tokened):
-    distinct_bad_words = set()
     dic = {}
-    for key in bad_words.keys():
-        distinct_bad_words = distinct_bad_words.union(bad_words[key])
     count=0
-    dic = {}
     for w in tokened:
         if w in distinct_bad_words:
             count+=1
             #dic["contains_{}".format(w)] = True
     dic["bad_words_all_type"] = count
     return (dic)
+
+#################################################################################################
+"""
+from function x26 to x38, input is a raw string, for example "hello everyone", output is integer
+"""
+# count number of dependencies with proper nouns in the singular
+def dependency_features(sent):
+    dic = {}
+    result = dependency_parser.raw_parse(sent)
+    dep = result.__next__()
+    list_dependencies = list(dep.triples())
+    list_function = [x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,x36,x37,x38,x39,x40,x41,x42,x43,x44,x45]
+    for function in list_function:
+        dic.update(function(list_dependencies))
+    return dic
+
+def x26(list_dependencies):
+    # start to count
+    count=0
+    for dependency in list_dependencies:
+        type_words= [dependency[0][1],dependency[2][1]]
+        if 'NNP' in type_words:
+            count+=1
+    dic = {}
+    dic["dependency_proper_noun_singular"] = count
+    return dic
+
+# count number of dependencies with proper nouns in the plural
+def x27(list_dependencies):
+    # start to count
+    count=0
+    for dependency in list_dependencies:
+        type_words= [dependency[0][1],dependency[2][1]]
+        if 'NNP$' in type_words:
+            count+=1
+    dic = {}
+    dic["dependency_proper_noun_plural"] = count
+    return dic
+
+# count number of dependencies with personal pronouns
+def x28(list_dependencies):
+    # start to count
+    count=0
+    for dependency in list_dependencies:
+        type_words= [dependency[0][1],dependency[2][1]]
+        if 'PRP' in type_words:
+            count+=1
+    dic = {}
+    dic["dependency_personal_pronoun"] = count
+    return dic
+
+# count number of dependencies with possessive pronoun
+def x29(list_dependencies):
+    # start to count
+    count=0
+    for dependency in list_dependencies:
+        type_words= [dependency[0][1],dependency[2][1]]
+        if 'PRP$' in type_words:
+            count+=1
+    dic = {}
+    dic["dependency_possessive_pronoun"] = count
+    return dic
+
+# count number of dependencies with denial (with words never or not)
+def x30(list_dependencies):
+    # start to count
+    count=0
+    for dependency in list_dependencies:
+        words=[dependency[0][0],dependency[2][0]]
+        if 'not' in words or 'never' in words:
+            count+=1
+    dic = {}
+    dic["dependency_with_denial"] = count
+    return dic
+
+# count number of dependencies with denial that contain proper nouns in the singular
+def x31(list_dependencies):
+    # start to count
+    count = 0
+    for dependency in list_dependencies:
+        if ((dependency[0][0] in ['not','never']) and (dependency[2][1]=='NNP')) or ((dependency[2][0] in ['not','never']) and (dependency[0][1]=='NNP')):
+            count+=1
+    dic = {}
+    dic["dependency_denial_contain_proper_noun_singular"] = count
+    return dic
+
+#  number of dependencies with denial that contain proper nouns in the plural
+def x32(list_dependencies):
+    # start to count
+    count = 0
+    for dependency in list_dependencies:
+        if ((dependency[0][0] in ['not','never']) and (dependency[2][1]=='NNP$')) or ((dependency[2][0] in ['not','never']) and (dependency[0][1]=='NNP$')):
+            count+=1
+    dic = {}
+    dic["dependency_denial_contain_proper_noun_plural"] = count
+    return dic
+
+# number of dependencies with denial that contain personal pronouns
+def x33(list_dependencies):
+    # start to count
+    count = 0
+    for dependency in list_dependencies:
+        if ((dependency[0][0] in ['not','never']) and (dependency[2][1]=='PRP')) or ((dependency[2][0] in ['not','never']) and (dependency[0][1]=='PRP')):
+            count+=1
+    dic = {}
+    dic["dependency_denial_contain_personal_pronoun"] = count
+    return dic
+
+#count number of dependencies with denial that contain possessive pronouns
+def x34(list_dependencies):
+    # start to count
+    count = 0
+    for dependency in list_dependencies:
+        if ((dependency[0][0] in ['not','never']) and (dependency[2][1]=='PRP$')) or ((dependency[2][0] in ['not','never']) and (dependency[0][1]=='PRP$')):
+            count+=1
+    dic = {}
+    dic["dependency_denial_contain_possessive_pronoun"] = count
+    return dic
+
+# count number of dependencies between proper nouns in the singular and
+# the words from dependencies with denial
+def x35(list_dependencies):
+    list_words_in_dependencies_with_denial0 = []
+    for dependency in list_dependencies:
+        words=[dependency[0][0],dependency[2][0]]
+        if 'not' in words or 'never' in words:
+            list_words_in_dependencies_with_denial0.extend(words)
+    list_words_in_dependencies_with_denial1 = [ w for w in list_words_in_dependencies_with_denial0 if w not in ['not','never']]
+    # start to count
+    count = 0
+    for dependency in list_dependencies:
+        if ((dependency[0][1]== 'NNP') and (dependency[2][0] in list_words_in_dependencies_with_denial1)) or ((dependency[2][1]== 'NNP') and (dependency[0][0] in list_words_in_dependencies_with_denial1)):
+            count+=1
+    dic = {}
+    dic["dependency_proper_noun_singular_and_denial"] = count
+    return dic
+
+# count number of dependencies between proper nouns in the plural
+# and the words from dependencies with denial
+def x36(list_dependencies):
+    list_words_in_dependencies_with_denial0 = []
+    for dependency in list_dependencies:
+        words=[dependency[0][0],dependency[2][0]]
+        if 'not' in words or 'never' in words:
+            list_words_in_dependencies_with_denial0.extend(words)
+    list_words_in_dependencies_with_denial1 = [ w for w in list_words_in_dependencies_with_denial0 if w not in ['not','never']]
+    # start to count
+    count = 0
+    for dependency in list_dependencies:
+        if ((dependency[0][1]== 'NNP$') and (dependency[2][0] in list_words_in_dependencies_with_denial1)) or ((dependency[2][1]== 'NNP$') and (dependency[0][0] in list_words_in_dependencies_with_denial1)):
+            count+=1
+    dic = {}
+    dic["dependency_proper_noun_plural_and_denial"] = count
+    return dic
+
+# count number of dependencies between personal pronouns and the
+# words from dependencies with denial
+def x37(list_dependencies):
+    list_words_in_dependencies_with_denial0 = []
+    for dependency in list_dependencies:
+        words=[dependency[0][0],dependency[2][0]]
+        if 'not' in words or 'never' in words:
+            list_words_in_dependencies_with_denial0.extend(words)
+    list_words_in_dependencies_with_denial1 = [ w for w in list_words_in_dependencies_with_denial0 if w not in ['not','never']]
+    # start to count
+    count = 0
+    for dependency in list_dependencies:
+        if ((dependency[0][1]== 'PRP') and (dependency[2][0] in list_words_in_dependencies_with_denial1)) or ((dependency[2][1]== 'PRP') and (dependency[0][0] in list_words_in_dependencies_with_denial1)):
+            count+=1
+    dic = {}
+    dic["dependency_personal_pronoun_and_denial"] = count
+    return dic
+
+# number of dependencies between possessive pronouns and the words
+# from dependencies with denial
+def x38(list_dependencies):
+    list_words_in_dependencies_with_denial0 = []
+    for dependency in list_dependencies:
+        words=[dependency[0][0],dependency[2][0]]
+        if 'not' in words or 'never' in words:
+            list_words_in_dependencies_with_denial0.extend(words)
+    list_words_in_dependencies_with_denial1 = [ w for w in list_words_in_dependencies_with_denial0 if w not in ['not','never']]
+    # start to count
+    count = 0
+    for dependency in list_dependencies:
+        if ((dependency[0][1]== 'PRP$') and (dependency[2][0] in list_words_in_dependencies_with_denial1)) or ((dependency[2][1]== 'PRP$') and (dependency[0][0] in list_words_in_dependencies_with_denial1)):
+            count+=1
+    dic = {}
+    dic["dependency_possessive_pronoun_and_denial"] = count
+    return dic
+
+"""
+from function x39 to x45, input include: list_bad_words is a list of bad words, 
+sent_string is raw string
+"""
+def x39(list_dependencies):
+    # start to count
+    count=0
+    for dependency in list_dependencies:
+        if (dependency[0][0] in distinct_bad_words) or (dependency[2][0] in distinct_bad_words):
+            count+=1
+    dic = {}
+    dic["dependency_contain_bad_words"] = count
+    return dic
+# count number of dependencies with denial that contain the bad words
+def x40(list_dependencies):
+    # start to count
+    count=0
+    for dependency in list_dependencies:
+        if ((dependency[0][0] in distinct_bad_words) and (dependency[2][0] in ['not','never'])) or ((dependency[2][0] in distinct_bad_words) and (dependency[0][0] in ['not','never'])):
+            count+=1
+    dic = {}
+    dic["dependency_denial_contain_bad_words"] = count
+    return dic
+
+# count number of dependencies between proper nouns in the singular and the bad words
+def x41(list_dependencies):
+    # start to count
+    count=0
+    for dependency in list_dependencies:
+        if ((dependency[0][1]=='NNP') and (dependency[2][0] in distinct_bad_words)) or ((dependency[2][1]=='NNP') and (dependency[0][0] in distinct_bad_words)):
+            count+=1
+    dic = {}
+    dic["dependency_proper_noun_singular_bad_words"] = count
+    return dic
+
+# count number of dependencies between proper nouns in the plural and the bad words
+def x42(list_dependencies):
+    # start to count
+    count=0
+    for dependency in list_dependencies:
+        if ((dependency[0][1]=='NNP$') and (dependency[2][0] in distinct_bad_words)) or ((dependency[2][1]=='NNP$') and (dependency[0][0] in distinct_bad_words)):
+            count+=1
+    dic = {}
+    dic["dependency_proper_noun_plural_bad_words"] = count
+    return dic
+
+# count number of dependencies between personal pronouns and the bad words
+def x43(list_dependencies):
+    # start to count
+    count=0
+    for dependency in list_dependencies:
+        if ((dependency[0][1]=='PRP') and (dependency[2][0] in distinct_bad_words)) or ((dependency[2][1]=='PRP') and (dependency[0][0] in distinct_bad_words)):
+            count+=1
+    dic = {}
+    dic["dependency_personal_pronoun_bad_words"] = count
+    return dic
+
+# count number of dependencies between possessive pronouns and the bad words
+def x44(list_dependencies):
+    # start to count
+    count=0
+    for dependency in list_dependencies:
+        if ((dependency[0][1]=='PRP$') and (dependency[2][0] in distinct_bad_words)) or ((dependency[2][1]=='PRP$') and (dependency[0][0] in distinct_bad_words)):
+            count+=1
+    dic = {}
+    dic["dependency_possessive_pronoun_bad_words"] = count
+    return dic
+
+# count number of dependencies between pronouns and the bad words
+def x45(list_dependencies):
+    count = x41(list_dependencies)["dependency_proper_noun_singular_bad_words"] + x42(list_dependencies)["dependency_proper_noun_plural_bad_words"] + x43(list_dependencies)["dependency_personal_pronoun_bad_words"] + x44(list_dependencies)["dependency_possessive_pronoun_bad_words"]
+    dic = {}
+    dic["dependency_pronoun_bad_words"] = count
+    return dic
