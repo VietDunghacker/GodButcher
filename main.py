@@ -27,16 +27,21 @@ with open("./toxic_comment/train.csv") as f:
 	next(data)
 	for row in data:
 		collected_data.append((row[1],(int(row[2]),int(row[3]),int(row[4]),int(row[5]),int(row[6]), int(row[7]))))
-collected_data = collected_data
 for (comment, tag) in collected_data:
 	if sum(tag) == 0:
 		clean_data.add((comment,tag))
 	else:
 		toxic_data.add((comment,tag))
+tagt = [0] * 6
+for (comment, tag) in collected_data:
+	for i in range(6):
+		tagt[i] += tag[i]
 toxic_data = list(toxic_data)
 clean_data = list(clean_data)
-train_data = toxic_data[int(0.1 * len(toxic_data)):] + clean_data[int(0.1 * len(clean_data)):]
-test_data = toxic_data[:int(0.1 * len(toxic_data))] + clean_data[:int(0.1 * len(clean_data))]
+train_data = toxic_data[int(0.25 * len(toxic_data)):]
+test_data = toxic_data[:int(0.25 * len(toxic_data))]
+train_data = train_data + clean_data[int(0.25 * len(clean_data)):]
+test_data = test_data + clean_data[:int(0.25 * len(clean_data))]
 '''tags = [0] * 7
 for (comment, tag) in train_data:
 	if sum(tag) == 0:
@@ -45,8 +50,7 @@ for (comment, tag) in train_data:
 		for i in range(6):
 			tags[i] += tag[i]
 for i in range(len(tags)):
-	print(tags[i])
-'''
+	print(tags[i])'''
 #negative features. Input is a sentence (raw string)
 count = 0
 def negative_features(sent):
@@ -55,24 +59,24 @@ def negative_features(sent):
 	#tag_words = nltk.pos_tag(words) #add tag into each word
 	#add features
 	dic = {}
-	dic.update(utilities.num_word(sent))
-	dic.update(utilities.num_unique_word(sent))
+	#dic.update(utilities.num_word(sent))
+	#dic.update(utilities.num_unique_word(sent))
 	dic.update(utilities.ration_unique(sent))
-	dic.update(utilities.num_token_no_stop(words))
-	dic.update(utilities.num_spelling_error(words))
+	#dic.update(utilities.num_token_no_stop(words))
+	#dic.update(utilities.num_spelling_error(words))
 	dic.update(utilities.num_allcap(words))
 	dic.update(utilities.rate_allcap(sent,words))
-	dic.update(utilities.length_cmt(sent))
+	#dic.update(utilities.length_cmt(sent))
 	dic.update(utilities.num_cap_letter(sent))
 	dic.update(utilities.rate_cap_letter(sent))
 	dic.update(utilities.num_explan_mark(sent))
 	dic.update(utilities.rate_explan_mark(sent))
-	dic.update(utilities.num_quest_mark(sent))
-	dic.update(utilities.rate_quest_mark(sent))
-	dic.update(utilities.num_punc_mark(sent))
-	dic.update(utilities.num_mark_sym(sent))
-	dic.update(utilities.rate_space(sent))
-	dic.update(utilities.num_smile(words))
+	#dic.update(utilities.num_quest_mark(sent))
+	#dic.update(utilities.rate_quest_mark(sent))
+	#dic.update(utilities.num_punc_mark(sent))
+	#dic.update(utilities.num_mark_sym(sent))
+	#dic.update(utilities.rate_space(sent))
+	#dic.update(utilities.num_smile(words))
 	dic.update(utilities.rate_lower(sent))
 	dic.update(utilities.x20(words))
 	dic.update(utilities.x21(words))
@@ -117,13 +121,13 @@ for label in range(6):
 		precision = 0
 	else:
 		precision = round(errorPP/(errorPP + errorPN),4)
-	if((errorNN + errorNP) == 0):
+	if((errorPP + errorNP) == 0):
 		recall = 0
 	else:
-		recall = round(errorNN/(errorNN + errorNP),4)
+		recall = round(errorPP/(errorPP + errorNP),4)
 
-	print("Label {}: Accuracy = {} Precision = {} Recall = {}".format(labels[label], nltk.classify.accuracy(classifier, test_set), precision, recall))
-	#classifier.show_most_informative_features(20)
+	print("Label {}: Accuracy = {} Precision = {} Recall = {}".format(labels[label], round(nltk.classify.accuracy(classifier, test_set),4), precision, recall))
+	#classifier.show_most_informative_features(30)
 	#print(classifier.pseudocode(depth = 20))
 end  = time.time()
 print("total time is {}".format(end - start))

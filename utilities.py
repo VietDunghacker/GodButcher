@@ -73,7 +73,7 @@ def ration_unique(raw):
     output: dict ration_unique : ration of unique word
     '''
     rate = num_unique_word(raw)['num_unique_word']/num_word(raw)['num_word']
-    return ({'ration unique': rate})
+    return ({'rate_unique': rate})
 def num_token_no_stop(tokened):
     '''
     return number of token without stop word (depend on token function, can conclude '.', ',')
@@ -565,7 +565,7 @@ def stm_score(sent):
     token_sents = nltk.sent_tokenize(sent)
     res = list(map(sid.polarity_scores,token_sents))
     score = sum([scores['compound'] for scores in res])/len(res)
-    return round(score,3)
+    return score
 
 def feature_scaling(features):
     '''
