@@ -27,7 +27,7 @@ with open("./toxic_comment/train.csv") as f:
 	next(data)
 	for row in data:
 		collected_data.append((row[1],(int(row[2]),int(row[3]),int(row[4]),int(row[5]),int(row[6]), int(row[7]))))
-collected_data = list(set(collected_data))[:20000]
+collected_data = collected_data
 for (comment, tag) in collected_data:
 	if sum(tag) == 0:
 		clean_data.add((comment,tag))
@@ -35,8 +35,8 @@ for (comment, tag) in collected_data:
 		toxic_data.add((comment,tag))
 toxic_data = list(toxic_data)
 clean_data = list(clean_data)
-train_data = toxic_data[int(0.1 * len(toxic_data)):] + clean_data[int(0.5 * len(clean_data)):]
-test_data = toxic_data[:int(0.1 * len(toxic_data))] + clean_data[:int(0.5 * len(clean_data))]
+train_data = toxic_data[int(0.1 * len(toxic_data)):] + clean_data[int(0.1 * len(clean_data)):]
+test_data = toxic_data[:int(0.1 * len(toxic_data))] + clean_data[:int(0.1 * len(clean_data))]
 '''tags = [0] * 7
 for (comment, tag) in train_data:
 	if sum(tag) == 0:
@@ -71,14 +71,28 @@ def negative_features(sent):
 	dic.update(utilities.rate_quest_mark(sent))
 	dic.update(utilities.num_punc_mark(sent))
 	dic.update(utilities.num_mark_sym(sent))
+	dic.update(utilities.rate_space(sent))
 	dic.update(utilities.num_smile(words))
 	dic.update(utilities.rate_lower(sent))
-	dic.update(utilities.dependency_features(sent))
+	dic.update(utilities.x20(words))
+	dic.update(utilities.x21(words))
+	dic.update(utilities.x22(words))
+	dic.update(utilities.x23(words))
+	dic.update(utilities.x24(words))
+	dic.update(utilities.x25(words))
+	dic["sentimental_score"] = utilities.stm_score(sent)
+	#dic.update(utilities.dependency_features(sent))
 	return dic
 
+start = time.time()
+res = negative_features(train_data[0][0])
+end = time.time()
+print("total time for this result {} is {}".format(res, end-start))
 #classify data using NaiveBayes
 feature_vector_train_data = [negative_features(sent) for (sent,tag) in train_data]
 feature_vector_test_data = [negative_features(sent) for (sent,tag) in test_data]
+feature_vector_train_data = utilities.feature_scaling(feature_vector_train_data)
+feature_vector_test_data = utilities.feature_scaling(feature_vector_test_data)
 for label in range(6):
 	train_set, test_set = [], []
 	for i in range(len(train_data)):
@@ -99,9 +113,17 @@ for label in range(6):
 				errorNP += 1
 			else:
 				errorPN += 1
-	precision = round(errorPP/(errorPP + errorPN),4)
-	recall = round(errorNN/(errorNN + errorNP),4)
+	if(errorPP + errorPN == 0):
+		precision = 0
+	else:
+		precision = round(errorPP/(errorPP + errorPN),4)
+	if((errorNN + errorNP) == 0):
+		recall = 0
+	else:
+		recall = round(errorNN/(errorNN + errorNP),4)
 
 	print("Label {}: Accuracy = {} Precision = {} Recall = {}".format(labels[label], nltk.classify.accuracy(classifier, test_set), precision, recall))
-	#classifier.show_most_informative_features(50)
-	#print(classifier.pseudocode(depth = 50))
+	#classifier.show_most_informative_features(20)
+	#print(classifier.pseudocode(depth = 20))
+end  = time.time()
+print("total time is {}".format(end - start))

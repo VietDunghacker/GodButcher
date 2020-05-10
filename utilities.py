@@ -2,15 +2,22 @@ import csv
 import os
 import sys
 import nltk
+import time
+import numpy as np
+import scipy.stats
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from nltk.corpus import stopwords
 from nltk.util import bigrams
 from nltk.parse.stanford import StanfordDependencyParser
 
+high_threshold = scipy.stats.norm.ppf(.995,0,1)
+low_threshold = scipy.stats.norm.ppf(.005,0,1)
 
 path_to_jar = './stanford_parser/stanford-parser.jar'
 path_to_models_jar = './stanford_parser/stanford-parser-3.9.2-models.jar'
 
 dependency_parser = StanfordDependencyParser(path_to_jar=path_to_jar, path_to_models_jar=path_to_models_jar)
+sid = SentimentIntensityAnalyzer() # One-time initialization
 
 stopwords = set(stopwords.words('english')) #stopword
 englishwords = set(nltk.corpus.words.words())
@@ -66,7 +73,7 @@ def ration_unique(raw):
     output: dict ration_unique : ration of unique word
     '''
     rate = num_unique_word(raw)['num_unique_word']/num_word(raw)['num_word']
-    return ({'ration unique': round(rate,3)})
+    return ({'ration unique': rate})
 def num_token_no_stop(tokened):
     '''
     return number of token without stop word (depend on token function, can conclude '.', ',')
@@ -102,7 +109,7 @@ def rate_allcap(raw, tokened):
     output: dict rate all cap :rate of all capital word
     '''
     rate = num_allcap(tokened)['num_all_cap']/ num_word(raw)['num_word']
-    return ({'rate_all_cap': round(rate, 3)})
+    return ({'rate_all_cap': rate})
 def length_cmt(raw):
     '''
     return length of the cmt
@@ -125,7 +132,7 @@ def rate_cap_letter(raw):
     outout: dict 'rate cap letter': ratio of capital letter
     '''
     rate = num_cap_letter(raw)['num_cap_letter']/len(raw)
-    return({'rate_cap_letter':round(rate, 3)})
+    return({'rate_cap_letter':rate})
 def num_explan_mark(raw):
     '''
     return number of explanation mark (not necessary using as explanation)
@@ -144,7 +151,7 @@ def rate_explan_mark(raw):
     output: rate of explanation mark
     '''
     rate = num_explan_mark(raw)['num_explan_mark']/len(raw)
-    return({'rate_explan_mark':round(rate, 3)})
+    return({'rate_explan_mark':rate})
 def num_quest_mark(raw):
     '''
     return number of question mark (not necessary using as question)
@@ -163,7 +170,7 @@ def rate_quest_mark(raw):
     output: dict 'rate quest mark':rate of question mark
     '''
     rate = num_quest_mark(raw)['num_quest_mark']/len(raw)
-    return {'rate quest mark' : round(rate, 3)}
+    return {'rate_quest_mark' : rate}
 def num_punc_mark(raw):
     '''
     return number of punctuation mark (not necessary using as finish setences)
@@ -174,7 +181,7 @@ def num_punc_mark(raw):
     for c in raw:
         if c=='.':
             count=count+1
-    return {'num_ounc_mark': count}
+    return {'num_punc_mark': count}
 def num_mark_sym(raw):
     '''
     return number of marking symbol (*, &,$,%)
@@ -183,20 +190,31 @@ def num_mark_sym(raw):
     '''
     count=0
     for c in raw:
-        if c in {'*','&','$','%'}:
+        if c in ['*','&','$','%']:
             count=count+1
     return {'num_mark_sym': count}
 def num_smile(tokened):
     '''
     Count the number of emoji (can not count the case hoang:) or :))))
     input: tokened: list
-    output:dict 'num smile': number of smile
+    output:dict 'num_smile': number of smile
     '''
     count= 0
     for w in bigrams(tokened):
         if w== (':',')'):
             count=count+1
     return {'num_smile':count}
+def rate_space(raw):
+    '''
+    Return the ratio of space
+    input: raw string
+    output:dict 'rate_space': ratio of space
+    '''
+    count = 0
+    for c in raw:
+        if c == " ":
+            count += 1
+    return {"rate_space": count/len(raw)}
 def rate_lower(raw):
     '''
     Count the rate of lowercase character
@@ -205,13 +223,13 @@ def rate_lower(raw):
     '''
     l = [w for w in raw if w.islower()]
     rate = len(l)/len(raw)
-    return({'rate_lower': round(rate, 3)})
+    return({'rate_lower': rate})
 # input: list of word, output: integer
 def x20(tokened):
     count=0
     dic = {}
     for w in tokened:
-        if w in bad_words['bad-words.txt']:
+        if w.lower() in bad_words['bad-words.txt']:
             count+=1
             #dic["contains_{}".format(w)] = True
     dic["bad_words_type_1"] = count
@@ -221,7 +239,7 @@ def x21(tokened):
     count=0
     dic = {}
     for w in tokened:
-        if w in bad_words['swearWords.txt']:
+        if w.lower() in bad_words['swearWords.txt']:
             count+=1
             #dic["contains_{}".format(w)] = True
     dic["bad_words_type_2"] = count
@@ -231,7 +249,7 @@ def x22(tokened):
     count=0
     dic = {}
     for w in tokened:
-        if w in bad_words['facebook_bad_words.txt']:
+        if w.lower() in bad_words['facebook_bad_words.txt']:
             count+=1
             #dic["contains_{}".format(w)] = True
     dic["bad_words_type_3"] = count
@@ -242,7 +260,7 @@ def x23(tokened):
     count=0
     dic = {}
     for w in tokened:
-        if w in bad_words['youtube_bad_words.txt']:
+        if w.lower() in bad_words['youtube_bad_words.txt']:
             count+=1
             #dic["contains_{}".format(w)] = True
     dic["bad_words_type_4"] = count
@@ -253,7 +271,7 @@ def x24(tokened):
     count=0
     dic = {}
     for w in tokened:
-        if w in bad_words['google_twunter_lol.txt']:
+        if w.lower() in bad_words['google_twunter_lol.txt']:
             count+=1
             #dic["contains_{}".format(w)] = True
     dic["bad_words_type_5"] = count
@@ -264,7 +282,7 @@ def x25(tokened):
     dic = {}
     count=0
     for w in tokened:
-        if w in distinct_bad_words:
+        if w.lower() in distinct_bad_words:
             count+=1
             #dic["contains_{}".format(w)] = True
     dic["bad_words_all_type"] = count
@@ -277,9 +295,14 @@ from function x26 to x38, input is a raw string, for example "hello everyone", o
 # count number of dependencies with proper nouns in the singular
 def dependency_features(sent):
     dic = {}
-    result = dependency_parser.raw_parse(sent)
-    dep = result.__next__()
-    list_dependencies = list(dep.triples())
+    list_dependencies = set()
+    sentences = nltk.tokenize.sent_tokenize(sent)
+
+    result = dependency_parser.raw_parse_sents(sentences)
+    for sentence in result:
+        for item in next(sentence).triples():
+            list_dependencies.add(item)
+
     list_function = [x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,x36,x37,x38,x39,x40,x41,x42,x43,x44,x45]
     for function in list_function:
         dic.update(function(list_dependencies))
@@ -534,3 +557,35 @@ def x45(list_dependencies):
     dic = {}
     dic["dependency_pronoun_bad_words"] = count
     return dic
+
+def stm_score(sent):
+    '''
+    Give VADER sentiment score for a comment
+    '''
+    token_sents = nltk.sent_tokenize(sent)
+    res = list(map(sid.polarity_scores,token_sents))
+    score = sum([scores['compound'] for scores in res])/len(res)
+    return round(score,3)
+
+def feature_scaling(features):
+    '''
+    Rescaling features around means
+    features: list of unscaled-feature dictionaries
+    '''
+    data = []
+    for d in features:
+        data.append(list(d.values()))
+    feature_values = np.array(data)
+    means = np.mean(feature_values, axis=0)
+    stdevs = np.std(feature_values, axis=0)
+
+    for d in features:
+        for i,(k,v) in enumerate(d.items()):
+            res = (v - means[i])/stdevs[i]
+            if (res >= high_threshold):
+                d[k] = 'high'
+            elif (res <= low_threshold):
+                d[k] = 'low'
+            else:
+                d[k] = 'medium'
+    return features
