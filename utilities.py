@@ -65,7 +65,7 @@ def num_unique_word(raw):
     output: dict num_unique_word: number of unique word
     '''
     return ({'num_unique_word':len(set(raw.split()))})
-def ration_unique(raw):
+def rate_unique(raw):
     '''
     compute ration of unique word
     a word is a substring seperated by space
@@ -93,7 +93,7 @@ def num_spelling_error(tokened):
     '''
     spell_wrong= [w for w in tokened if w.lower() not in englishwords]
     return ({'num_spelling_error':len(spell_wrong)})
-def num_allcap(tokened):
+def num_all_cap(tokened):
     '''
     return number of word written all captial (duplicated)
     input tokened: list
@@ -101,14 +101,14 @@ def num_allcap(tokened):
     '''
     cap= [w for w in tokened if w.isupper()]
     return ({'num_all_cap':len(cap)})
-def rate_allcap(raw, tokened):
+def rate_all_cap(raw, tokened):
     '''
     return portion of word written all capital (duplicated)
     input: raw: str
            tokened: list
     output: dict rate all cap :rate of all capital word
     '''
-    rate = num_allcap(tokened)['num_all_cap']/ num_word(raw)['num_word']
+    rate = num_all_cap(tokened)['num_all_cap']/ num_word(raw)['num_word']
     return ({'rate_all_cap': rate})
 def length_cmt(raw):
     '''
@@ -565,7 +565,7 @@ def stm_score(sent):
     token_sents = nltk.sent_tokenize(sent)
     res = list(map(sid.polarity_scores,token_sents))
     score = sum([scores['compound'] for scores in res])/len(res)
-    return score
+    return {"sentimental_score":score}
 
 def feature_scaling(features):
     '''

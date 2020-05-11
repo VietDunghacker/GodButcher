@@ -7,6 +7,8 @@ import os
 import sys
 import utilities
 import time
+import pandas as pd
+import random
 from urllib import request
 from nltk import FreqDist
 from nltk.stem import PorterStemmer 
@@ -16,87 +18,41 @@ from nltk.util import bigrams
 ps = PorterStemmer() #stemmer
 labels = ["toxic","severe_toxic","obscene","threat","insult","identity_hate"]
 
-#collect train data
-collected_data = []
-toxic_data = set()
-clean_data = set()
-train_data = []
-test_data = []
-with open("./toxic_comment/train.csv") as f:
-	data = csv.reader(f)
-	next(data)
-	for row in data:
-		collected_data.append((row[1],(int(row[2]),int(row[3]),int(row[4]),int(row[5]),int(row[6]), int(row[7]))))
-for (comment, tag) in collected_data:
-	if sum(tag) == 0:
-		clean_data.add((comment,tag))
-	else:
-		toxic_data.add((comment,tag))
-tagt = [0] * 6
-for (comment, tag) in collected_data:
-	for i in range(6):
-		tagt[i] += tag[i]
-toxic_data = list(toxic_data)
-clean_data = list(clean_data)
-train_data = toxic_data[int(0.25 * len(toxic_data)):]
-test_data = toxic_data[:int(0.25 * len(toxic_data))]
-train_data = train_data + clean_data[int(0.25 * len(clean_data)):]
-test_data = test_data + clean_data[:int(0.25 * len(clean_data))]
-'''tags = [0] * 7
-for (comment, tag) in train_data:
-	if sum(tag) == 0:
-		tags[6] += 1
-	else:
-		for i in range(6):
-			tags[i] += tag[i]
-for i in range(len(tags)):
-	print(tags[i])'''
-#negative features. Input is a sentence (raw string)
-count = 0
-def negative_features(sent):
-	words = word_tokenize(sent) #tokenize into list of words
-	#clean the data
-	#tag_words = nltk.pos_tag(words) #add tag into each word
-	#add features
-	dic = {}
-	#dic.update(utilities.num_word(sent))
-	#dic.update(utilities.num_unique_word(sent))
-	dic.update(utilities.ration_unique(sent))
-	#dic.update(utilities.num_token_no_stop(words))
-	#dic.update(utilities.num_spelling_error(words))
-	dic.update(utilities.num_allcap(words))
-	dic.update(utilities.rate_allcap(sent,words))
-	#dic.update(utilities.length_cmt(sent))
-	dic.update(utilities.num_cap_letter(sent))
-	dic.update(utilities.rate_cap_letter(sent))
-	dic.update(utilities.num_explan_mark(sent))
-	dic.update(utilities.rate_explan_mark(sent))
-	#dic.update(utilities.num_quest_mark(sent))
-	#dic.update(utilities.rate_quest_mark(sent))
-	#dic.update(utilities.num_punc_mark(sent))
-	#dic.update(utilities.num_mark_sym(sent))
-	#dic.update(utilities.rate_space(sent))
-	#dic.update(utilities.num_smile(words))
-	dic.update(utilities.rate_lower(sent))
-	dic.update(utilities.x20(words))
-	dic.update(utilities.x21(words))
-	dic.update(utilities.x22(words))
-	dic.update(utilities.x23(words))
-	dic.update(utilities.x24(words))
-	dic.update(utilities.x25(words))
-	dic["sentimental_score"] = utilities.stm_score(sent)
-	#dic.update(utilities.dependency_features(sent))
-	return dic
-
+list_features = ["num_word","num_unique_word", "rate_unique", "num_token_no_stop", "num_spelling_error", "num_all_cap", "rate_all_cap", "length_cmt", "num_cap_letter", "rate_cap_letter", "num_explan_mark", "rate_explan_mark","num_quest_mark", "rate_quest_mark","num_punc_mark","num_mark_sym","num_smile","rate_space","rate_lower","bad_words_type_1","bad_words_type_2","bad_words_type_3","bad_words_type_4","bad_words_type_5","bad_words_all_type", "sentimental_score"]
 start = time.time()
-res = negative_features(train_data[0][0])
-end = time.time()
-print("total time for this result {} is {}".format(res, end-start))
-#classify data using NaiveBayes
-feature_vector_train_data = [negative_features(sent) for (sent,tag) in train_data]
-feature_vector_test_data = [negative_features(sent) for (sent,tag) in test_data]
+feature_data = pd.read_csv('./features.csv', header = 0)
+collected_data = []
+clean_data = []
+toxic_data = []
+for i in range(len(feature_data)):
+	dic = {}
+	tags = []
+	row = feature_data.iloc[i]
+	for feature in list_features:
+		dic[feature] = float(row[feature])
+	for label in labels:
+		tags.append(int(row[label]))
+	collected_data.append((dic,tuple(tags)))
+#print("Collect data time is {}".format(time.time() - start))
+
+for (features, tags) in collected_data:
+	if sum(tags) == 0:
+		clean_data.append((features,tags))
+	else:
+		toxic_data.append((features,tags))
+random.shuffle(clean_data)
+random.shuffle(toxic_data)
+train_data = toxic_data[int(0.1 * len(toxic_data)):]
+test_data = toxic_data[:int(0.1 * len(toxic_data))]
+train_data = train_data + clean_data[int(0.1 * len(clean_data)):]
+test_data = test_data + clean_data[:int(0.1 * len(clean_data))]
+
+feature_vector_train_data = [feature for (feature, tag) in train_data]
+feature_vector_test_data = [feature for (feature, tag) in test_data]
 feature_vector_train_data = utilities.feature_scaling(feature_vector_train_data)
 feature_vector_test_data = utilities.feature_scaling(feature_vector_test_data)
+
+classifiers = [None] * 6
 for label in range(6):
 	train_set, test_set = [], []
 	for i in range(len(train_data)):
@@ -104,6 +60,7 @@ for label in range(6):
 	for i in range(len(test_data)):
 		test_set.append((feature_vector_test_data[i], test_data[i][1][label]))
 	classifier = nltk.NaiveBayesClassifier.train(train_set)
+	classifiers[label] = classifier
 	errorPP, errorPN, errorNP, errorNN = 0, 0, 0, 0
 	for (feature, tag) in test_set:
 		predict = classifier.classify(feature)
