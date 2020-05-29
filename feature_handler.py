@@ -92,9 +92,12 @@ def initialize(processes = 0, a = 0, b = 0):
 					p = multiprocessing.Pool(processes)
 				else:
 					p = multiprocessing.Pool()
-				results = p.map(extracting_features, collected_data[:10])
+				print(a + i * 10000, a + min((i + 1) * 10000, b - a))
+				results = p.map(extracting_features, collected_data[a + i * 10000 : a + min((i + 1) * 10000, b - a)])
 				for result in results:
 					writer.writerow(result)
+				p.close()
+				p.join()
 				server.stop()
 	end = time.time()
 	print(end-start)
@@ -119,4 +122,4 @@ def open_test_data():
 
 #update new features
 if __name__ == "__main__":
-	initialize()
+	initialize(b = 20000)
