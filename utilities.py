@@ -8,15 +8,12 @@ import scipy.stats
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from nltk.corpus import stopwords
 from nltk.util import bigrams
-from nltk.parse.stanford import StanfordDependencyParser
+from nltk.parse.corenlp import CoreNLPDependencyParser
 
 high_threshold = scipy.stats.norm.ppf(.995,0,1)
 low_threshold = scipy.stats.norm.ppf(.005,0,1)
 
-path_to_jar = './stanford_parser/stanford-parser.jar'
-path_to_models_jar = './stanford_parser/stanford-parser-3.9.2-models.jar'
-
-dependency_parser = StanfordDependencyParser(path_to_jar=path_to_jar, path_to_models_jar=path_to_models_jar)
+dependency_parser = CoreNLPDependencyParser()
 sid = SentimentIntensityAnalyzer() # One-time initialization
 
 stopwords = set(stopwords.words('english')) #stopword
@@ -284,7 +281,7 @@ def x25(tokened):
     for w in tokened:
         if w.lower() in distinct_bad_words:
             count+=1
-            #dic["contains_{}".format(w)] = True
+            #dic["contains_{}".format(w)] = 1
     dic["bad_words_all_type"] = count
     return (dic)
 
