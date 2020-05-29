@@ -8,12 +8,18 @@ import sys
 import utilities
 import time
 import multiprocessing 
+import urllib.request
+import zipfile
 from urllib import request
 from nltk import FreqDist
 from nltk.stem import PorterStemmer 
 from nltk.tokenize import word_tokenize
 from nltk.util import bigrams
 from nltk.parse.corenlp import CoreNLPServer
+
+if not "stanford-corenlp-4.0.0" in os.listdir():
+	urllib.request.urlretrieve('http://nlp.stanford.edu/software/stanford-corenlp-latest.zip', 'stanford-corenlp-latest.zip')
+	zipfile.ZipFile('stanford-corenlp-latest.zip', 'r').extractall('./')
 
 STANFORD = "./stanford-corenlp-4.0.0"
 server = CoreNLPServer("./stanford-corenlp-4.0.0/stanford-corenlp-4.0.0.jar", "./stanford-corenlp-4.0.0/stanford-corenlp-4.0.0-models.jar",)
@@ -70,10 +76,12 @@ def negative_features(sent):
 #initialize the data
 #processes: number of processes running. If leave it alone the program will consume all available resources
 #a and b: interval of collected_data
-def initialize(processes = 0, a = 0, b = len(collected_data)):
+def initialize(processes = 0, a = 0, b = 0):
 	start = time.time()
-	if initialized == False:
+	if initialized == False and a <= b:
 		open_test_data()
+		if b == 0:
+			b = len(collected_data)
 		times = int((len(collected_data[a : b]) - 1)/10000 + 1)
 		with open('./features.csv', mode = 'w') as output:
 			writer = csv.writer(output, delimiter = ',')
@@ -87,7 +95,7 @@ def initialize(processes = 0, a = 0, b = len(collected_data)):
 				results = p.map(extracting_features, collected_data[:10])
 				for result in results:
 					writer.writerow(result)
-		server.stop()
+				server.stop()
 	end = time.time()
 	print(end-start)
 
