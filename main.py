@@ -95,8 +95,14 @@ for label in range(6):
 				errorNP += 1
 			else:
 				errorPN += 1
-	precision = errorPP/(errorPP + errorPN)
-	recall = errorPP/(errorPP + errorNP)
+	if errorPP + errorPN != 0:
+		precision = errorPP/(errorPP + errorPN)
+	else:
+		precision = 0
+	if errorPP + errorNP != 0:
+		recall = errorPP/(errorPP + errorNP)
+	else:
+		recall = 0
 	fmeasure = 2 * precision * recall / (precision + recall)
 	print("Label {}: Accuracy = {} Precision = {:.4f} Recall = {:.4f} F-measure = {:.4f}".format(labels[label], round(nltk.classify.accuracy(classifier, test_set),4), precision, recall, fmeasure))
 	#classifier.show_most_informative_features(30) #print most informative features in Naive Bayes classification
