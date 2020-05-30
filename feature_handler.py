@@ -74,18 +74,19 @@ def negative_features(sent):
 	return dic
 
 #initialize the data
-#processes: number of processes running. If leave it alone the program will consume all available resources
+#processes: number of processes running. If leave it alone the program will try to consume all available resources
 #a and b: interval of collected_data
 def initialize(processes = 0, a = 0, b = 0):
 	start = time.time()
-	if initialized == False and a <= b:
+	if initialized == False:
 		open_test_data()
 		if b == 0:
 			b = len(collected_data)
 		times = int((len(collected_data[a : b]) - 1)/10000 + 1)
 		with open('./features.csv', mode = 'w') as output:
 			writer = csv.writer(output, delimiter = ',')
-			writer.writerow(['Comment'] + labels + list_features)
+			if a == 0:
+				writer.writerow(['Comment'] + labels + list_features)
 			for i in range(times):
 				server.start()
 				if processes != 0:
@@ -93,7 +94,10 @@ def initialize(processes = 0, a = 0, b = 0):
 				else:
 					p = multiprocessing.Pool()
 				print(a + i * 10000, a + min((i + 1) * 10000, b - a))
-				results = p.map(extracting_features, collected_data[a + i * 10000 : a + min((i + 1) * 10000, b - a)])
+				if(a + min((i + 1) * 10000, b - a) >= len(collected_data)):
+					results = p.map(extracting_features, collected_data[a + i * 10000 : ])
+				else:
+					results = p.map(extracting_features, collected_data[a + i * 10000 : a + min((i + 1) * 10000, b - a)])
 				for result in results:
 					writer.writerow(result)
 				p.close()
@@ -104,6 +108,7 @@ def initialize(processes = 0, a = 0, b = 0):
 
 def extracting_features(sentence):
 	idnum, comment, tags = sentence
+	print(idnum, "begin")
 	result_dict = negative_features(comment)
 	result_dict.update(tags)
 	result_list = []
@@ -111,6 +116,7 @@ def extracting_features(sentence):
 		result_list.append(result_dict[label])
 	for feature in list_features:
 		result_list.append(result_dict[feature])
+	print(idnum, 'success')
 	return [idnum] + result_list
 #open the file containing train data
 def open_test_data():
@@ -122,4 +128,4 @@ def open_test_data():
 
 #update new features
 if __name__ == "__main__":
-	initialize(b = 20000)
+	initialize()

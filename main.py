@@ -22,8 +22,14 @@ labels = ["toxic","severe_toxic","obscene","threat","insult","identity_hate"]
 list_features = ["num_word","num_unique_word", "rate_unique", "num_token_no_stop", "num_spelling_error", "num_all_cap", "rate_all_cap", "length_cmt", "num_cap_letter", "rate_cap_letter", "num_explan_mark", "rate_explan_mark","num_quest_mark", "rate_quest_mark","num_punc_mark","num_mark_sym","num_smile","rate_space","rate_lower","bad_words_type_1","bad_words_type_2","bad_words_type_3","bad_words_type_4","bad_words_type_5","bad_words_all_type", "sentimental_score"]
 list_dependency_features = ["dependency_proper_noun_singular", "dependency_proper_noun_plural", "dependency_personal_pronoun", "dependency_possessive_pronoun", "dependency_with_denial", "dependency_denial_contain_proper_noun_singular", "dependency_denial_contain_proper_noun_plural", "dependency_denial_contain_personal_pronoun", "dependency_denial_contain_possessive_pronoun", "dependency_proper_noun_singular_and_denial", "dependency_proper_noun_plural_and_denial", "dependency_personal_pronoun_and_denial", "dependency_possessive_pronoun_and_denial", "dependency_contain_bad_words", "dependency_denial_contain_bad_words", "dependency_proper_noun_singular_bad_words", "dependency_proper_noun_plural_bad_words", "dependency_personal_pronoun_bad_words", "dependency_possessive_pronoun_bad_words", "dependency_pronoun_bad_words"]
 list_features = list_features + list_dependency_features
+list_features.remove("dependency_denial_contain_proper_noun_plural")
+list_features.remove("dependency_proper_noun_plural_and_denial")
+list_features.remove("dependency_proper_noun_plural_bad_words")
+list_features.remove("dependency_proper_noun_plural")
+remove_list = ["dependency_denial_contain_proper_noun_plural", "dependency_proper_noun_plural_and_denial", "dependency_proper_noun_plural_bad_words", "dependency_proper_noun_plural"]
+list_features = ["rate_unique", "num_all_cap", "rate_all_cap", "num_cap_letter", "rate_cap_letter", "num_explan_mark","rate_explan_mark", "rate_quest_mark", "rate_lower", "bad_words_type_1", "bad_words_type_2", "bad_words_type_3", "bad_words_type_4", "bad_words_type_5", "bad_words_all_type", "sentimental_score","dependency_with_denial", "dependency_proper_noun_singular_and_denial", "dependency_personal_pronoun_bad_words", "dependency_possessive_pronoun_bad_words", "dependency_pronoun_bad_words"]
 
-#start = time.time()
+start = time.time()
 if not 'features.csv' in os.listdir():
 	os.system('python feature_handler.py')
 
@@ -59,15 +65,14 @@ random.shuffle(toxic_data)
 #select train data and test data
 train_data = toxic_data[int(0.2 * len(toxic_data)):]
 test_data = toxic_data[:int(0.2 * len(toxic_data))]
-train_data = train_data + clean_data[int(0.2 * len(clean_data)):]
-test_data = test_data + clean_data[:int(0.2 * len(clean_data))]
+train_data = train_data + clean_data[int(0.5 * len(clean_data)):]
+test_data = test_data + clean_data[:int(0.5 * len(clean_data))]
 
-'''extract the feature into feature vectors and then scale the feature.
-Each feature now has one of these three values: high, normal or medium, based on the normal distribution of 99% confidence interval'''
+'''extract the feature into feature vectors and then scale the feature.'''
 feature_vector_train_data = [feature for (feature, tag) in train_data]
 feature_vector_test_data = [feature for (feature, tag) in test_data]
-feature_vector_train_data = utilities.feature_scaling(feature_vector_train_data)
-feature_vector_test_data = utilities.feature_scaling(feature_vector_test_data)
+#feature_vector_train_data = utilities.feature_scaling(feature_vector_train_data)
+#feature_vector_test_data = utilities.feature_scaling(feature_vector_test_data)
 
 classifiers = [None] * 6 #contain 6 classifiers for each label
 for label in range(6):
@@ -77,7 +82,7 @@ for label in range(6):
 	for i in range(len(test_data)):
 		test_set.append((feature_vector_test_data[i], test_data[i][1][label]))
 
-	classifier = nltk.NaiveBayesClassifier.train(train_set) #choose Naive Bayes classification
+	classifier = nltk.MaxentClassifier.train(train_set, algorithm = 'gis', max_iter = 20) #choose Naive Bayes classification
 	#classifier = nltk.DecisionTreeClassifier.train(train_set) #choose Decision Tree classification
 	classifiers[label] = classifier
 
@@ -103,10 +108,25 @@ for label in range(6):
 		recall = errorPP/(errorPP + errorNP)
 	else:
 		recall = 0
-	fmeasure = 2 * precision * recall / (precision + recall)
+	if precision + recall != 0:
+		fmeasure = 2 * precision * recall / (precision + recall)
+	else:
+		fmeasure = 0
 	print("Label {}: Accuracy = {} Precision = {:.4f} Recall = {:.4f} F-measure = {:.4f}".format(labels[label], round(nltk.classify.accuracy(classifier, test_set),4), precision, recall, fmeasure))
-	#classifier.show_most_informative_features(30) #print most informative features in Naive Bayes classification
+	classifier.show_most_informative_features(20) #print most informative features in Naive Bayes classification
 	#print(classifier.pseudocode(depth = 20)) #print the pseudocode of Decision Tree classification
-
-'''end  = time.time()
-print("total time is {}".format(end - start))'''
+end  = time.time()
+print("total time is {}".format(end - start))
+'''while(True):
+	sample = input("Please enter a string:")
+	if sample == 'quit':
+		break
+	print(sample)
+	featured_sample = feature_handler.negative_features(sample)
+	for key in remove_list:
+		del featured_sample[key]
+	featured_sample = utilities.scale_sample(featured_sample, sample_mean_train_data, sample_dev_train_data)
+	print(featured_sample)
+	for label in range(6):
+		res = classifiers[label].classify(featured_sample)
+		print("label {}: {}".format(labels[label],res))'''
