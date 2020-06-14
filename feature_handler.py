@@ -10,6 +10,7 @@ import time
 import multiprocessing 
 import urllib.request
 import zipfile
+import pandas as pd
 from urllib import request
 from nltk import FreqDist
 from nltk.stem import PorterStemmer 
@@ -25,7 +26,7 @@ STANFORD = "./stanford-corenlp-4.0.0"
 server = CoreNLPServer("./stanford-corenlp-4.0.0/stanford-corenlp-4.0.0.jar", "./stanford-corenlp-4.0.0/stanford-corenlp-4.0.0-models.jar",)
 
 
-initialized = False #if this is false, the initialize() function will be running
+initialized = True #if this is false, the initialize() function will be running
 up_to_date = True #check if this is up-to-date
 
 ps = PorterStemmer() #stemmer
@@ -77,9 +78,8 @@ def negative_features(sent):
 #processes: number of processes running. If leave it alone the program will try to consume all available resources
 #a and b: interval of collected_data
 def initialize(processes = 0, a = 0, b = 0):
-	start = time.time()
 	if initialized == False:
-		open_test_data()
+		open_test_data(collected_data)
 		if b == 0:
 			b = len(collected_data)
 		times = int((len(collected_data[a : b]) - 1)/10000 + 1)
@@ -93,7 +93,6 @@ def initialize(processes = 0, a = 0, b = 0):
 					p = multiprocessing.Pool(processes)
 				else:
 					p = multiprocessing.Pool()
-				print(a + i * 10000, a + min((i + 1) * 10000, b - a))
 				if(a + min((i + 1) * 10000, b - a) >= len(collected_data)):
 					results = p.map(extracting_features, collected_data[a + i * 10000 : ])
 				else:
@@ -103,8 +102,6 @@ def initialize(processes = 0, a = 0, b = 0):
 				p.close()
 				p.join()
 				server.stop()
-	end = time.time()
-	print(end-start)
 
 def extracting_features(sentence):
 	idnum, comment, tags = sentence
@@ -118,8 +115,68 @@ def extracting_features(sentence):
 		result_list.append(result_dict[feature])
 	print(idnum, 'success')
 	return [idnum] + result_list
+
+def update_features(features, function):
+	open_test_data()
+	feature_data = pd.read_csv('./features.csv', header = 0)
+	new_features = []
+	for feature in features:
+		temp_list = []
+		for i in range(len(feature_data)):
+			row = feature_data.iloc[i]
+			comment = row['comment_text']
+			value = function(comment)[feature]
+			temp_list.append(value)
+		new_features.append(temp_list)
+	for i, feature in enumerate(features):
+		feature_data[feature] = new_features[i]
+	feature_data.to_csv('./features.csv', index = False)
+
+def update_data(comment, label_list):
+	assert len(labels) == 6
+
+	train_file = pd.read_csv('./toxic_comment/train.csv', header = 0)
+	idnum_set = set(train_file['id'])
+	new_idnum = ''
+	for i in range(16):
+		ran = random.randrange(36)
+		if ran < 10:
+			new_idnum += str(ran)
+		else:
+			new_idnum += chr(ord('a') + ran - 10)
+	while (new_idnum in idnum_set):
+		new_idnum = ''
+		for i in range(16):
+			ran = random.randrange(36)
+			if ran < 10:
+				new_idnum += str(ran)
+			else:
+				new_idnum += chr(ord('a') + ran - 10)
+
+	dic = {}
+	dic['id'] = new_idnum
+	dic['comment_text'] = comment
+	for i in range(6):
+		dic[labels[i]] = label_list[i]
+	train_file = train_file.append(dic, ignore_index = True)
+	train_file.to_csv("./toxic_comment/train.csv", index = False)
+
+	feature_file = pd.read_csv('./features.csv', header = 0)
+	dic = {}
+	dic['Comment'] = new_idnum
+	for i in range(6):
+		dic[labels[i]] = label_list[i]
+	server.start()
+	feature_dic = negative_features(comment)
+	server.stop()
+	for feature in list_features:
+		dic[feature] = feature_dic[feature]
+	feature_file = feature_file.append(dic, ignore_index = True)
+	feature_file.to_csv("./features.csv", header = 0)
+
 #open the file containing train data
-def open_test_data():
+def open_test_data(collected_data):
+	collected_data = []
 	with open("./toxic_comment/train.csv", encoding = 'utf-8') as f:
 		data = csv.reader(f)
 		next(data)
@@ -129,3 +186,4 @@ def open_test_data():
 #update new features
 if __name__ == "__main__":
 	initialize()
+	update_data('You are son of the bitch, mother fucker!!!!', [1, 1, 1, 0, 1, 0])
