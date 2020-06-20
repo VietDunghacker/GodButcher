@@ -13,6 +13,7 @@ from nltk.parse.corenlp import CoreNLPDependencyParser
 high_threshold = scipy.stats.norm.ppf(.995,0,1)
 low_threshold = scipy.stats.norm.ppf(.005,0,1)
 
+ps = nltk.stem.PorterStemmer() #stemmer
 dependency_parser = CoreNLPDependencyParser()
 sid = SentimentIntensityAnalyzer() # One-time initialization
 
@@ -211,7 +212,8 @@ def rate_space(raw):
     for c in raw:
         if c == " ":
             count += 1
-    return {"rate_space": count/len(raw)}
+    rate = count/len(raw)
+    return {"rate_space": rate}
 def rate_lower(raw):
     '''
     Count the rate of lowercase character
@@ -570,19 +572,41 @@ def feature_scaling(features):
     features: list of unscaled-feature dictionaries
     '''
     data = []
+    sample_mean = {}
+    sample_dev = {}
     for d in features:
         data.append(list(d.values()))
     feature_values = np.array(data)
     means = np.mean(feature_values, axis=0)
     stdevs = np.std(feature_values, axis=0)
 
+    for i, k in enumerate(d.keys()):
+        sample_mean[k] = means[i]
+        sample_dev[k] = stdevs[i]
     for d in features:
         for i,(k,v) in enumerate(d.items()):
             res = (v - means[i])/stdevs[i]
-            if (res >= high_threshold):
-                d[k] = 'high'
-            elif (res <= low_threshold):
-                d[k] = 'low'
-            else:
-                d[k] = 'medium'
+            d[k] = res
     return features
+
+def scale_sample(feature, sample_mean, sample_dev):
+    dic = {}
+    for k in feature.keys():
+        res = (feature[k] - sample_mean[k])/sample_dev[k]
+        if (res >= high_threshold):
+            dic[k] = 'high'
+        elif (res <= low_threshold):
+            dic[k] = 'low'
+        else:
+            dic[k] = 'medium'
+    return dic
+
+def bag_of_words(text):
+    dic = {}
+    words = nltk.word_tokenize(text)
+    words = [ps.stem(word) for word in words if not(word.lower() in stopwords or word in stopwords) and (word.lower() in englishwords or word in englishwords)]
+    #tagged = nltk.pos_tag(words, tagset = 'universal')
+    fdist = nltk.FreqDist(words)
+    for key in fdist.keys():
+        dic['contain_{}'.format(key)] = fdist[key]
+    return dic

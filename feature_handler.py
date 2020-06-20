@@ -172,7 +172,7 @@ def update_data(comment, label_list):
 	for feature in list_features:
 		dic[feature] = feature_dic[feature]
 	feature_file = feature_file.append(dic, ignore_index = True)
-	feature_file.to_csv("./features.csv", header = 0)
+	feature_file.to_csv("./features.csv", index = False)
 
 #open the file containing train data
 def open_test_data(collected_data):
